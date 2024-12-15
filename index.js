@@ -28,7 +28,24 @@ async function run() {
     await client.connect();
 
     
+    // database collections
+    const categoriesCollection = client.db('Superio').collection('categories');
+    const jobsCollection = client.db('Superio').collection('jobs');
 
+
+
+    // categories related api
+    app.get('/categories', async(req, res) => {
+        const result = await categoriesCollection.find().toArray();
+        res.send(result);
+    });
+
+
+    // jobs related api
+    app.get('/jobs', async(req, res) => {
+        const result = await jobsCollection.find().toArray();
+        res.send(result);
+    })
 
 
     // Send a ping to confirm a successful connection

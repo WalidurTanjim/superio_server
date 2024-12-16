@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -35,6 +35,14 @@ async function run() {
 
 
     // categories related api
+    app.get('/findJobs/:category/:id', async(req, res) => {
+        const category = req.params.category;
+        const id = req.params.id;
+        const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
+        const result = await jobsCollection.findOne(query);
+        res.send(result);
+    })
+
     app.get('/categories', async(req, res) => {
         const result = await categoriesCollection.find().toArray();
         res.send(result);

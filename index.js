@@ -18,6 +18,23 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
 
 
+// verifyToken
+const verifyToken = async(req, res, next) => {
+  const token = req?.cookies?.token;
+  
+  if(!token){
+    return res.status(401).send({ message: "Unauthorized access" });
+  };
+
+  jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
+    if(err){
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+
+    req.user = decoded;
+    next();
+  })
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_name}:${process.env.DB_pass}@cluster0.a1a1zbo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -67,7 +84,7 @@ async function run() {
     });
 
     // jobs related api
-    app.get('/jobs', async(req, res) => {
+    app.get('/jobs', verifyToken, async(req, res) => {
         const result = await jobsCollection.find().toArray();
         res.send(result);
     })

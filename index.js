@@ -28,7 +28,7 @@ const verifyToken = async(req, res, next) => {
 
   jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
     if(err){
-      return res.status(403).send({ message: "Forbidden access" });
+      return res.status(401).send({ message: "Unauthorized access" });
     }
 
     req.user = decoded;
@@ -84,7 +84,7 @@ async function run() {
     });
 
     // jobs related api
-    app.get('/jobs', verifyToken, async(req, res) => {
+    app.get('/jobs', async(req, res) => {
         const result = await jobsCollection.find().toArray();
         res.send(result);
     })
@@ -97,11 +97,32 @@ async function run() {
     })
     
     // jobs-posted-by-user related api
-    app.get('/myPostedJobs', async(req, res) => {
+    app.get('/myPostedJobs', verifyToken, async(req, res) => {
       const email = req.query.email;
+      
+      const decodedEmail = req?.user?.email;
+      if(decodedEmail !== email){
+        return res.status(403).send({ message: "Forbidden access"});
+      }
+
       const query = { hr_email: email };
       const result = await jobsCollection.find(query).toArray();
       res.send(result);
+    })
+
+    app.delete('/myPostedJobs/:id', verifyToken, async(req, res) => {
+      const email = req.query.email;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobsCollection.findOne(query);
+      if(email !== result?.hr_email){
+        console.log('validation failed')
+        return res.status(403).send({ message: "Forbidden access" });
+      }else{
+        console.log('delete successfully')
+        const deletedJob = await jobsCollection.deleteOne(query);
+        res.send(deletedJob);
+      }
     })
 
     // logout

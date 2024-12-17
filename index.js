@@ -50,13 +50,11 @@ async function run() {
         res.send(result);
     });
 
-
     // jobs related api
     app.get('/jobs', async(req, res) => {
         const result = await jobsCollection.find().toArray();
         res.send(result);
     })
-
 
     // addJob
     app.post('/addJob', async(req, res) => {
@@ -64,7 +62,14 @@ async function run() {
       const result = await jobsCollection.insertOne(job);
       res.send(result);
     })
-
+    
+    // jobs-posted-by-user related api
+    app.get('/myPostedJobs', async(req, res) => {
+      const email = req.query.email;
+      const query = { hr_email: email };
+      const result = await jobsCollection.find(query).toArray();
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

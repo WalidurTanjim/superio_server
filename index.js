@@ -176,8 +176,25 @@ async function run() {
     })
 
     app.get('/applyJob', async(req, res) => {
-      const result = await applyJobsCollection.find().toArray();
-      res.send(result);
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await applyJobsCollection.find(query).toArray();
+      let jobsResult = [];
+      if(!result){
+        return res.status(400).send('No job applications available')
+      }else{
+        for(const jobId of result){
+          const id = jobId?.job_id;
+
+          const jobQuery = { _id: new ObjectId(id) };
+          const result = await jobsCollection.findOne(jobQuery);
+          if(result){
+            jobsResult.push(result);
+          }
+        }
+      }
+      // console.log('Jobs result:', jobsResult);
+      res.send(jobsResult);
     })
 
     app.post('/applyJob', async(req, res) => {

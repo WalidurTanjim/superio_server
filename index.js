@@ -70,6 +70,12 @@ async function run() {
 
 
     // categories related api
+    app.get('/categories', async(req, res) => {
+      const result = await categoriesCollection.find().toArray();
+      res.send(result);
+    });
+    
+    // jobs related api
     app.get('/findJobs/:category/:id', async(req, res) => {
         const category = req.params.category;
         const id = req.params.id;
@@ -78,12 +84,19 @@ async function run() {
         res.send(result);
     })
 
-    app.get('/categories', async(req, res) => {
-        const result = await categoriesCollection.find().toArray();
+    app.get('/updateJob/:category/:id', async(req, res) => {
+      const category = req.params.category;
+      const id = req.params.id;
+      const email = req.query.email;
+      const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
+      const result = await jobsCollection.findOne(query);
+      if(email !== result?.hr_email){
+        return res.status(403).send({ message: 'Forbidden access' })
+      }else{
         res.send(result);
-    });
+      }
+    })
 
-    // jobs related api
     app.get('/jobs', async(req, res) => {
         const result = await jobsCollection.find().toArray();
         res.send(result);
@@ -123,6 +136,32 @@ async function run() {
         const deletedJob = await jobsCollection.deleteOne(query);
         res.send(deletedJob);
       }
+    })
+
+    app.put('/updateJob/:category/:id', async(req, res) => {
+      const category = req.params.category;
+      const id = req.params.id;
+      const job = req.body;
+
+      const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
+      const options = { upsert: true };
+      const updatedJob = {
+        $set: {
+          company_name: job.company_name,
+          company_logo: job.company_logo,
+          title: job.title,
+          category: job.category,
+          job_type: job.job_type,
+          job_category: job.job_category,
+          salary: job.salary,
+          job_description: job.job_description,
+          responsibilities: job.responsibilities,
+          requirements: job.requirements,
+          expiration_date: job.expiration_date,
+        }
+      };
+      const result = await jobsCollection.updateOne(query, updatedJob, options);
+      res.send(result);
     })
 
     // logout

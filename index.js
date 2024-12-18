@@ -56,12 +56,13 @@ async function run() {
     // database collections
     const categoriesCollection = client.db('Superio').collection('categories');
     const jobsCollection = client.db('Superio').collection('jobs');
+    const applyJobsCollection = client.db('Superio').collection('applyJobs');
 
 
     // jwt related api
     app.post('/createToken', async(req, res) => {
       const userInfo = req.body;
-      const token = jwt.sign(userInfo, process.env.TOKEN_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign(userInfo, process.env.TOKEN_SECRET, { expiresIn: '15s' });
       res.cookie('token', token, {
           httpOnly: true,
           secure: false
@@ -163,6 +164,29 @@ async function run() {
       const result = await jobsCollection.updateOne(query, updatedJob, options);
       res.send(result);
     })
+
+
+
+    // applyJob related apis
+    app.get('/applyJob/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await applyJobsCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.get('/applyJob', async(req, res) => {
+      const result = await applyJobsCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.post('/applyJob', async(req, res) => {
+      const job = req.body;
+      const result = await applyJobsCollection.insertOne(job);
+      res.send(result);
+    })
+
+
 
     // logout
     app.post('/logout', (req, res) => {

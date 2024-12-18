@@ -175,8 +175,14 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/applyJob', async(req, res) => {
+    app.get('/applyJob', verifyToken, async(req, res) => {
+      const decodedEmail = req?.user?.email;
       const email = req.query.email;
+      
+      if(decodedEmail !== email){
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+
       const query = { email: email };
       const result = await applyJobsCollection.find(query).toArray();
       let jobsResult = [];

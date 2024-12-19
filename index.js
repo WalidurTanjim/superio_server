@@ -234,6 +234,13 @@ async function run() {
     })
 
 
+    // get jobs length
+    app.get('/jobsCount', async(req, res) => {
+      const count = await jobsCollection.estimatedDocumentCount();
+      res.send({ count });
+    })
+
+
 
     // logout
     app.post('/logout', (req, res) => {

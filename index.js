@@ -62,7 +62,7 @@ async function run() {
     // jwt related api
     app.post('/createToken', async(req, res) => {
       const userInfo = req.body;
-      const token = jwt.sign(userInfo, process.env.TOKEN_SECRET, { expiresIn: '15s' });
+      const token = jwt.sign(userInfo, process.env.TOKEN_SECRET, { expiresIn: '1h' });
       res.cookie('token', token, {
           httpOnly: true,
           secure: false
@@ -112,16 +112,40 @@ async function run() {
     
     // jobs-posted-by-user related api
     app.get('/myPostedJobs', verifyToken, async(req, res) => {
-      const email = req.query.email;
-      
-      const decodedEmail = req?.user?.email;
+      const email = req.query.email;  // query email
+      const decodedEmail = req?.user?.email;  // decoded email from verifyToken
+
+      // verify user with query email & user info of token
       if(decodedEmail !== email){
         return res.status(403).send({ message: "Forbidden access"});
       }
 
       const query = { hr_email: email };
-      const result = await jobsCollection.find(query).toArray();
-      res.send(result);
+      const result = await jobsCollection.find(query).toArray();  // jobs i have posted
+
+      const jobIds = result?.map(job => job?._id.toString()); // get all ids of my posted jobs
+
+      // fetch the count of applicants for each job
+      const applicationCounts = await applyJobsCollection.aggregate([
+        { $match: { job_id: { $in: jobIds } } },
+        { $group: { _id: "$job_id", count: { $sum: 1 } } }
+      ]).toArray();
+      // console.log(applicationCounts);
+
+      // get application count for each job
+      const jobWithApplications = result.map(job => {
+        const applicationData = applicationCounts.find(appliedJob => appliedJob?._id === job?._id.toString());
+        // console.log(applicationData);
+        return {
+          ...job,
+          applicants: applicationData ? applicationData.count : 0
+        };
+      });
+      // console.log(jobWithApplications);
+
+
+      // send my posted job with applicationCount as response to the client side
+      res.send(jobWithApplications);
     })
 
     app.delete('/myPostedJobs/:id', verifyToken, async(req, res) => {
@@ -187,7 +211,7 @@ async function run() {
       const result = await applyJobsCollection.find(query).toArray();
       let jobsResult = [];
       if(!result){
-        return res.status(400).send('No job applications available')
+        return res.status(400).send({ message: 'No job applications available' })
       }else{
         for(const jobId of result){
           const id = jobId?.job_id;

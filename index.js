@@ -99,8 +99,15 @@ async function run() {
     })
 
     app.get('/jobs', async(req, res) => {
-        const result = await jobsCollection.find().toArray();
-        res.send(result);
+      // get currentPage & itemsPerPage from client side as query
+      const page = parseInt(req?.query?.page);
+      const size = parseInt(req?.query?.size);
+
+      // skip jobs 
+      const skip = page * size;
+      
+      const result = await jobsCollection.find().skip(skip).limit(size).toArray();
+      res.send(result);
     })
 
     // addJob

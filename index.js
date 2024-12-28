@@ -85,18 +85,18 @@ async function run() {
         res.send(result);
     })
 
-    // app.get('/updateJob/:category/:id', async(req, res) => {  // unknown api
-    //   const category = req.params.category;
-    //   const id = req.params.id;
-    //   const email = req.query.email;
-    //   const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
-    //   const result = await jobsCollection.findOne(query);
-    //   if(email !== result?.hr_email){
-    //     return res.status(403).send({ message: 'Forbidden access' })
-    //   }else{
-    //     res.send(result);
-    //   }
-    // })
+    app.get('/updateJob/:category/:id', async(req, res) => {  // unknown api
+      const category = req.params.category;
+      const id = req.params.id;
+      const email = req.query.email;
+      const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
+      const result = await jobsCollection.findOne(query);
+      if(email !== result?.hr_email){
+        return res.status(403).send({ message: 'Forbidden access' })
+      }else{
+        res.send(result);
+      }
+    })
 
     app.get('/jobs', async(req, res) => {   // get all jobs with pagination
       // get currentPage & itemsPerPage from client side as query
@@ -192,6 +192,29 @@ async function run() {
       };
       const result = await jobsCollection.updateOne(query, updatedJob, options);
       res.send(result);
+    })
+
+    // find all applications of my posted job
+    app.get('/getApplicationsOfMyPostedJobs/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = { job_id: id };
+      const candidates = await applyJobsCollection.find(query).toArray();
+
+      // const job_ids = candidates?.map(id => id?.job_id) || [];
+      // // const result = job_ids?.map(async(id) => {
+      // //   const query = { _id: new ObjectId(id) };
+      // //   const job = await jobsCollection.findOne(query);
+      // //   return job;
+      // // })
+      // const result = await Promise.all(
+      //   job_ids.map(async (id) => {
+      //     const query = { _id: new ObjectId(id) };
+      //     const job = await jobsCollection.findOne(query);
+      //     return job; // Return the job object
+      //   })
+      // );
+      // console.log("Job result:", candidates);
+      res.send(candidates);
     })
 
 

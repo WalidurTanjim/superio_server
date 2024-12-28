@@ -70,14 +70,14 @@ async function run() {
     })
 
 
-    // categories related api
+    // categories related api (get all categories)
     app.get('/categories', async(req, res) => {
       const result = await categoriesCollection.find().toArray();
       res.send(result);
     });
     
     // jobs related api
-    app.get('/findJobs/:category/:id', async(req, res) => {
+    app.get('/findJobs/:category/:id', async(req, res) => { // get a single job base on category & id
         const category = req.params.category;
         const id = req.params.id;
         const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
@@ -85,40 +85,50 @@ async function run() {
         res.send(result);
     })
 
-    app.get('/updateJob/:category/:id', async(req, res) => {
-      const category = req.params.category;
-      const id = req.params.id;
-      const email = req.query.email;
-      const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
-      const result = await jobsCollection.findOne(query);
-      if(email !== result?.hr_email){
-        return res.status(403).send({ message: 'Forbidden access' })
-      }else{
-        res.send(result);
-      }
-    })
+    // app.get('/updateJob/:category/:id', async(req, res) => {  // unknown api
+    //   const category = req.params.category;
+    //   const id = req.params.id;
+    //   const email = req.query.email;
+    //   const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
+    //   const result = await jobsCollection.findOne(query);
+    //   if(email !== result?.hr_email){
+    //     return res.status(403).send({ message: 'Forbidden access' })
+    //   }else{
+    //     res.send(result);
+    //   }
+    // })
 
-    app.get('/jobs', async(req, res) => {
+    app.get('/jobs', async(req, res) => {   // get all jobs with pagination
       // get currentPage & itemsPerPage from client side as query
       const page = parseInt(req?.query?.page);
       const size = parseInt(req?.query?.size);
+      const search = req?.query?.search;
+      const categorySearch = req?.query?.categorySearch;
+      let query = {};
+      if(search){
+        query.title = { $regex: search, $options: 'i' };
+      }
+
+      if(categorySearch){
+        query.category = { $regex: categorySearch, $options: 'i' };
+      }
 
       // skip jobs 
       const skip = page * size;
       
-      const result = await jobsCollection.find().skip(skip).limit(size).toArray();
+      const result = await jobsCollection.find(query).skip(skip).limit(size).toArray();
       res.send(result);
     })
 
     // addJob
-    app.post('/addJob', async(req, res) => {
+    app.post('/addJob', async(req, res) => { // add a new job
       const job = req.body;
       const result = await jobsCollection.insertOne(job);
       res.send(result);
     })
     
     // jobs-posted-by-user related api
-    app.get('/myPostedJobs', verifyToken, async(req, res) => {
+    app.get('/myPostedJobs', verifyToken, async(req, res) => { //get all posted jobs by with total apply using aggregate
       const email = req.query.email;  // query email
       const decodedEmail = req?.user?.email;  // decoded email from verifyToken
 
@@ -140,8 +150,8 @@ async function run() {
       // console.log(applicationCounts);
 
       // get application count for each job
-      const jobWithApplications = result.map(job => {
-        const applicationData = applicationCounts.find(appliedJob => appliedJob?._id === job?._id.toString());
+      const jobWithApplications = result?.map(job => {
+        const applicationData = applicationCounts?.find(appliedJob => appliedJob?._id === job?._id.toString());
         // console.log(applicationData);
         return {
           ...job,
@@ -155,7 +165,7 @@ async function run() {
       res.send(jobWithApplications);
     })
 
-    app.delete('/myPostedJobs/:id', verifyToken, async(req, res) => {
+    app.delete('/myPostedJobs/:id', verifyToken, async(req, res) => { // delete a single job posted by me
       const email = req.query.email;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -170,7 +180,7 @@ async function run() {
       }
     })
 
-    app.put('/updateJob/:category/:id', async(req, res) => {
+    app.put('/updateJob/:category/:id', async(req, res) => {  // update a single job posted by me
       const category = req.params.category;
       const id = req.params.id;
       const job = req.body;
@@ -178,19 +188,7 @@ async function run() {
       const query = { $and: [{ _id: new ObjectId(id) }, { category: category }] };
       const options = { upsert: true };
       const updatedJob = {
-        $set: {
-          company_name: job.company_name,
-          company_logo: job.company_logo,
-          title: job.title,
-          category: job.category,
-          job_type: job.job_type,
-          job_category: job.job_category,
-          salary: job.salary,
-          job_description: job.job_description,
-          responsibilities: job.responsibilities,
-          requirements: job.requirements,
-          expiration_date: job.expiration_date,
-        }
+        $set: job
       };
       const result = await jobsCollection.updateOne(query, updatedJob, options);
       res.send(result);
@@ -199,14 +197,7 @@ async function run() {
 
 
     // applyJob related apis
-    app.get('/applyJob/:id', async(req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await applyJobsCollection.findOne(query);
-      res.send(result);
-    })
-
-    app.get('/applyJob', verifyToken, async(req, res) => {
+    app.get('/applyJob', verifyToken, async(req, res) => {  // get my all applied jobs
       const decodedEmail = req?.user?.email;
       const email = req.query.email;
       
@@ -234,7 +225,7 @@ async function run() {
       res.send(jobsResult);
     })
 
-    app.post('/applyJob', async(req, res) => {
+    app.post('/applyJob', async(req, res) => {   // apply a single job
       const job = req.body;
       const result = await applyJobsCollection.insertOne(job);
       res.send(result);
